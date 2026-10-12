@@ -4,16 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Helpful Habits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap">
 <style>
+  /* Layout: one narrow column of habit cards, tabs across the top. */
   :root {
+    --display: "Bricolage Grotesque", system-ui, sans-serif;
     --bg: #f6f5f1; --card: #ffffff; --text: #1f2328; --muted: #6b7280;
     --line: #e5e3dc; --accent: #2f6f4f; --accent-soft: #e3efe8; --warn: #a15c07;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #15171a; --card: #1e2125; --text: #e8e6e1; --muted: #9aa0a6;
       --line: #2e3237; --accent: #6cc196; --accent-soft: #23352b; --warn: #e0a54a;
+      color-scheme: dark;
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171a; --card: #1e2125; --text: #e8e6e1; --muted: #9aa0a6;
+    --line: #2e3237; --accent: #6cc196; --accent-soft: #23352b; --warn: #e0a54a;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body {
@@ -21,7 +31,8 @@
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   main { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; }
-  h1 { font-size: 1.5rem; margin: 8px 0 2px; }
+  h1, h2 { font-family: var(--display); text-wrap: balance; }
+  h1 { font-size: 1.6rem; margin: 8px 0 2px; }
   h2 { font-size: 1.1rem; margin: 0 0 8px; }
   .sub { color: var(--muted); margin: 0 0 16px; font-size: .9rem; }
   nav { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
@@ -81,13 +92,15 @@
   .grid7 .cell.l1 { background: var(--accent-soft); }
   .grid7 .cell.l2 { background: color-mix(in srgb, var(--accent) 55%, var(--accent-soft)); color: #fff; }
   .grid7 .cell.l3 { background: var(--accent); color: #fff; }
+  .btn:focus-visible, .check:focus-visible, nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sync { color: var(--muted); font-size: .8rem; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <main>
   <h1>Helpful Habits</h1>
-  <p class="sub" id="today-label"></p>
+  <p class="sub"><span id="today-label"></span> · <span class="sync" id="sync"></span></p>
 
   <nav>
     <button data-tab="today" class="on">Today</button>
@@ -151,7 +164,7 @@
     <div id="progress-area"></div>
     <div class="card">
       <h2>Backup</h2>
-      <p class="sub">Your data is saved in this browser. Export it now and then so you don't lose it.</p>
+      <p class="sub">Download a copy of your habits, assignments and vocab, or load one back in.</p>
       <div class="row">
         <button class="btn ghost" id="export">Export</button>
         <button class="btn ghost" id="import">Import</button>
@@ -188,8 +201,39 @@ function load() {
   return { log: {}, tasks: [], vocab: [] };
 }
 let state = load();
+// When opened on claude.ai, data is also saved privately to your account
+// (one document per person), so it follows you across devices.
+let remote = null, writing = Promise.resolve(), pending = null;
+function setSync(msg) { const el = document.getElementById('sync'); if (el) el.textContent = msg; }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  if (!remote) return;
+  clearTimeout(pending);
+  pending = setTimeout(() => {
+    const body = JSON.parse(JSON.stringify(state));
+    writing = writing.then(() => remote.set(body))
+      .then(() => setSync('Saved to your account'))
+      .catch(() => setSync('Could not save to your account — saved in this browser for now'));
+  }, 500);
+}
+async function connect() {
+  if (!window.claude || !window.claude.use) { setSync('Saved in this browser'); return; }
+  setSync('Connecting…');
+  try {
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    const uid = db && user ? await user.id() : null;
+    if (!uid) { setSync('Saved in this browser only (sign in to sync)'); return; }
+    remote = db.doc('data/users/' + uid + '/state');
+    const snap = await remote.get();
+    if (snap.exists) {
+      const v = JSON.parse(JSON.stringify(snap.data()));
+      state = { log: v.log || {}, tasks: v.tasks || [], vocab: v.vocab || [] };
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      render(); setSync('Saved to your account');
+    } else {
+      save();
+    }
+  } catch (e) { remote = null; setSync('Saved in this browser only'); }
 }
 
 // ---------- dates ----------
@@ -222,6 +266,14 @@ function weeklyStreak(h) {
   let d = addDays(weekStart(new Date()), -1), n = weekCount(h.id) >= h.target ? 1 : 0;
   while (weekCount(h.id, d) >= h.target) { n++; d = addDays(d, -7); }
   return n;
+}
+
+// Tap × once to arm it ("Delete?"), tap again within 3s to delete.
+function armDelete(b) {
+  if (b.dataset.armed) return true;
+  b.dataset.armed = '1'; b.textContent = 'Delete?';
+  setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = '×'; } }, 3000);
+  return false;
 }
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -311,7 +363,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.dataset.doneTask) { completeTask(b.dataset.doneTask); render(); }
-  if (b.dataset.delTask && confirm('Delete this assignment?')) {
+  if (b.dataset.delTask && armDelete(b)) {
     state.tasks = state.tasks.filter(x => x.id !== b.dataset.delTask); save(); render();
   }
 });
@@ -381,7 +433,7 @@ document.getElementById('vocab-form').addEventListener('submit', e => {
 
 document.getElementById('vocab-list').addEventListener('click', e => {
   const b = e.target.closest('[data-del-vocab]');
-  if (b && confirm('Delete this term?')) {
+  if (b && armDelete(b)) {
     state.vocab = state.vocab.filter(x => x.id !== b.dataset.delVocab); session = null; save(); render();
   }
 });
@@ -419,10 +471,13 @@ function renderProgress() {
 }
 
 // ---------- backup ----------
-document.getElementById('export').onclick = () => {
+document.getElementById('export').onclick = async () => {
+  const name = `helpful-habits-${today()}.json`, data = JSON.stringify(state, null, 2);
+  const dl = window.claude && window.claude.use ? await claude.use('downloads') : null;
+  if (dl) { try { await dl.save({ filename: name, data }); } catch (e) {} return; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
-  a.download = `helpful-habits-${today()}.json`;
+  a.download = name;
   a.click();
 };
 document.getElementById('import').onclick = () => document.getElementById('import-file').click();
@@ -431,8 +486,9 @@ document.getElementById('import-file').onchange = async e => {
     const data = JSON.parse(await e.target.files[0].text());
     if (!data.log) throw new Error('bad file');
     state = { log: data.log, tasks: data.tasks || [], vocab: data.vocab || [] };
-    save(); render(); alert('Imported!');
-  } catch (err) { alert('That file could not be imported.'); }
+    save(); render(); setSync('Backup loaded');
+  } catch (err) { setSync('That file is not a Helpful Habits backup'); }
+  e.target.value = '';
 };
 
 // ---------- tabs ----------
@@ -445,6 +501,7 @@ document.querySelector('nav').addEventListener('click', e => {
 
 function render() { renderToday(); renderTasks(); renderVocab(); renderProgress(); }
 render();
+connect();
 </script>
 </body>
 </html>

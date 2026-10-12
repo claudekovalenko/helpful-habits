@@ -19,6 +19,6 @@ A small habit tracker in one file (`index.html`). Open it in any browser; no ins
 - **Vocab**: add words and concepts, then do a 5-card review. Finishing the review checks off the habit for the day.
 - **Progress**: a 4-week calendar, per-habit stats, seminary points earned, and export/import for backups.
 
-Data is saved in your browser's local storage. Use **Export** now and then to keep a backup.
+Data is saved in your browser. When opened as a claude.ai artifact, it is also saved privately to your Claude account so it syncs across devices. Use **Export** now and then to keep a backup.
 
 To change the habits, edit the `HABITS` list near the top of the `<script>` in `index.html`.
