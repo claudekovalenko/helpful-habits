@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helpful Habits</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --text: #1f2328; --muted: #6b7280;
+    --line: #e5e3dc; --accent: #2f6f4f; --accent-soft: #e3efe8; --warn: #a15c07;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --card: #1e2125; --text: #e8e6e1; --muted: #9aa0a6;
+      --line: #2e3237; --accent: #6cc196; --accent-soft: #23352b; --warn: #e0a54a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 2px; }
+  h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: .9rem; }
+  nav { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+  nav button {
+    flex: 1; background: none; border: 0; padding: 10px 4px; color: var(--muted);
+    font: inherit; font-size: .9rem; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  nav button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 12px;
+  }
+  .habit { display: flex; align-items: center; gap: 12px; }
+  .habit .info { flex: 1; min-width: 0; }
+  .habit .name { font-weight: 600; }
+  .habit .meta { color: var(--muted); font-size: .85rem; }
+  .check {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--line);
+    background: none; cursor: pointer; font-size: 1.1rem; color: transparent; flex-shrink: 0;
+  }
+  .check.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dots { display: flex; gap: 4px; margin-top: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .dot.on { background: var(--accent); }
+  .pill {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    border-radius: 99px; padding: 1px 8px; font-size: .8rem; font-weight: 600;
+  }
+  .pill.warn { background: transparent; color: var(--warn); border: 1px solid var(--warn); }
+  form { display: grid; gap: 8px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 0; }
+  input, textarea, select {
+    font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); width: 100%;
+  }
+  textarea { min-height: 60px; resize: vertical; }
+  label { font-size: .8rem; color: var(--muted); display: grid; gap: 2px; }
+  .btn {
+    font: inherit; padding: 8px 14px; border-radius: 8px; border: 0; cursor: pointer;
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+  .btn.ghost { background: none; color: var(--muted); border: 1px solid var(--line); font-weight: 400; }
+  .btn.small { padding: 4px 10px; font-size: .85rem; }
+  ul.list { list-style: none; margin: 0; padding: 0; }
+  ul.list li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  ul.list li:first-child { border-top: 0; }
+  ul.list li .info { flex: 1; min-width: 0; }
+  ul.list li.done .info { opacity: .5; text-decoration: line-through; }
+  .x { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 1.1rem; }
+  .empty { color: var(--muted); font-size: .9rem; }
+  .flash { text-align: center; padding: 24px 8px; }
+  .flash .term { font-size: 1.4rem; font-weight: 700; }
+  .flash .def { margin-top: 12px; color: var(--muted); }
+  .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: .75rem; }
+  .grid7 .cell { aspect-ratio: 1; border-radius: 6px; background: var(--line); display: grid; place-items: center; }
+  .grid7 .cell.l1 { background: var(--accent-soft); }
+  .grid7 .cell.l2 { background: color-mix(in srgb, var(--accent) 55%, var(--accent-soft)); color: #fff; }
+  .grid7 .cell.l3 { background: var(--accent); color: #fff; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Helpful Habits</h1>
+  <p class="sub" id="today-label"></p>
+
+  <nav>
+    <button data-tab="today" class="on">Today</button>
+    <button data-tab="seminary">Seminary</button>
+    <button data-tab="vocab">Vocab</button>
+    <button data-tab="progress">Progress</button>
+  </nav>
+
+  <!-- TODAY -->
+  <section id="tab-today">
+    <div id="habit-list"></div>
+    <div class="card">
+      <h2>Next quick win in seminary</h2>
+      <div id="next-win"></div>
+    </div>
+  </section>
+
+  <!-- SEMINARY -->
+  <section id="tab-seminary" hidden>
+    <div class="card">
+      <h2>Add an assignment</h2>
+      <form id="task-form">
+        <input name="title" placeholder="e.g. Reading quiz ch. 4" required>
+        <div class="row">
+          <label>Class<input name="course" placeholder="e.g. Old Testament"></label>
+          <label>Points<input name="points" type="number" min="0" step="any" required></label>
+          <label>Minutes to finish<input name="minutes" type="number" min="1" required></label>
+        </div>
+        <button class="btn">Add</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Low-hanging fruit first</h2>
+      <p class="sub">Sorted by points per minute — most points for the least effort at the top.</p>
+      <ul class="list" id="task-list"></ul>
+    </div>
+  </section>
+
+  <!-- VOCAB -->
+  <section id="tab-vocab" hidden>
+    <div class="card" id="review-card">
+      <h2>Quick review</h2>
+      <div id="review-area"></div>
+    </div>
+    <div class="card">
+      <h2>Add a word or concept</h2>
+      <form id="vocab-form">
+        <input name="term" placeholder="Word or concept" required>
+        <textarea name="def" placeholder="Meaning / short explanation" required></textarea>
+        <button class="btn">Add</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>All terms <span class="pill" id="vocab-count"></span></h2>
+      <ul class="list" id="vocab-list"></ul>
+    </div>
+  </section>
+
+  <!-- PROGRESS -->
+  <section id="tab-progress" hidden>
+    <div id="progress-area"></div>
+    <div class="card">
+      <h2>Backup</h2>
+      <p class="sub">Your data is saved in this browser. Export it now and then so you don't lose it.</p>
+      <div class="row">
+        <button class="btn ghost" id="export">Export</button>
+        <button class="btn ghost" id="import">Import</button>
+      </div>
+      <input type="file" id="import-file" accept="application/json" hidden>
+    </div>
+  </section>
+</main>
+
+<script>
+const KEY = 'helpful-habits-v1';
+const REVIEW_SIZE = 5;
+
+// Habits. "daily" ones are checked once per day; "weekly" ones are counted per week.
+const HABITS = [
+  { id: 'workout', name: 'Work out at 9am', kind: 'daily',
+    why: 'Start the morning moving.' },
+  { id: 'homework', name: '30 min extra work at home', kind: 'daily',
+    why: 'Small daily effort around the house adds up.' },
+  { id: 'food', name: 'Give food that helps out', kind: 'weekly', target: 1, stretch: 2,
+    why: 'Goal: 1–2 times a week.' },
+  { id: 'seminary', name: 'Knock out a seminary quick win', kind: 'daily',
+    why: 'Finish the easy assignment worth the most points.' },
+  { id: 'vocab', name: 'Review vocab & concepts (a little)', kind: 'daily',
+    why: `Just ${REVIEW_SIZE} cards is enough.` },
+];
+
+// ---------- storage ----------
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.log) return s;
+  } catch (e) {}
+  return { log: {}, tasks: [], vocab: [] };
+}
+let state = load();
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// ---------- dates ----------
+const pad = n => String(n).padStart(2, '0');
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => dkey(new Date());
+function addDays(d, n) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
+function weekStart(d) { // Monday
+  const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return addDays(c, -((c.getDay() + 6) % 7));
+}
+function weekDays(d) { const s = weekStart(d); return [...Array(7)].map((_, i) => dkey(addDays(s, i))); }
+
+// log[date] = { habitId: count }
+const countOn = (date, id) => (state.log[date] && state.log[date][id]) || 0;
+function setCount(date, id, n) {
+  state.log[date] = state.log[date] || {};
+  if (n > 0) state.log[date][id] = n; else delete state.log[date][id];
+  save();
+}
+const weekCount = (id, d = new Date()) => weekDays(d).reduce((t, k) => t + countOn(k, id), 0);
+
+function streak(id) {
+  let d = new Date(), n = 0;
+  if (!countOn(dkey(d), id)) d = addDays(d, -1); // today not done yet doesn't break the streak
+  while (countOn(dkey(d), id)) { n++; d = addDays(d, -1); }
+  return n;
+}
+function weeklyStreak(h) {
+  let d = addDays(weekStart(new Date()), -1), n = weekCount(h.id) >= h.target ? 1 : 0;
+  while (weekCount(h.id, d) >= h.target) { n++; d = addDays(d, -7); }
+  return n;
+}
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- today ----------
+function renderToday() {
+  document.getElementById('today-label').textContent =
+    new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const t = today();
+  document.getElementById('habit-list').innerHTML = HABITS.map(h => {
+    if (h.kind === 'daily') {
+      const done = countOn(t, h.id) > 0, s = streak(h.id);
+      return `<div class="card habit">
+        <div class="info"><div class="name">${esc(h.name)}</div>
+          <div class="meta">${esc(h.why)}${s ? ` · <span class="pill">🔥 ${s} day${s > 1 ? 's' : ''}</span>` : ''}</div></div>
+        <button class="check ${done ? 'done' : ''}" data-toggle="${h.id}" aria-label="Mark done">✓</button>
+      </div>`;
+    }
+    const wc = weekCount(h.id);
+    const label = wc >= h.stretch ? 'Stretch goal hit 🎉' : wc >= h.target ? 'Goal met this week' : `${wc}/${h.target} this week`;
+    const dots = [...Array(h.stretch)].map((_, i) => `<span class="dot ${i < wc ? 'on' : ''}"></span>`).join('');
+    return `<div class="card habit">
+      <div class="info"><div class="name">${esc(h.name)}</div>
+        <div class="meta">${esc(h.why)} · <span class="pill ${wc < h.target ? 'warn' : ''}">${label}</span></div>
+        <div class="dots">${dots}</div></div>
+      <button class="btn small ghost" data-minus="${h.id}" ${countOn(t, h.id) ? '' : 'disabled'}>−</button>
+      <button class="btn small" data-plus="${h.id}">+ Today</button>
+    </div>`;
+  }).join('');
+
+  const win = sortedTasks().find(x => !x.done);
+  document.getElementById('next-win').innerHTML = win
+    ? `<div class="habit"><div class="info"><div class="name">${esc(win.title)}</div>
+        <div class="meta">${esc(win.course || '')} ${win.course ? '·' : ''} ${win.points} pts · ~${win.minutes} min</div></div>
+        <button class="btn small" data-done-task="${win.id}">Done</button></div>`
+    : `<p class="empty">No open assignments. Add some in the Seminary tab.</p>`;
+}
+
+document.getElementById('habit-list').addEventListener('click', e => {
+  const t = today(), b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.toggle) setCount(t, b.dataset.toggle, countOn(t, b.dataset.toggle) ? 0 : 1);
+  if (b.dataset.plus) setCount(t, b.dataset.plus, countOn(t, b.dataset.plus) + 1);
+  if (b.dataset.minus) setCount(t, b.dataset.minus, countOn(t, b.dataset.minus) - 1);
+  render();
+});
+
+// ---------- seminary ----------
+const ratio = x => x.points / Math.max(1, x.minutes);
+const sortedTasks = () => [...state.tasks].sort((a, b) => (a.done - b.done) || ratio(b) - ratio(a));
+
+function completeTask(id) {
+  const task = state.tasks.find(x => x.id === id);
+  if (!task) return;
+  task.done = !task.done;
+  if (task.done) setCount(today(), 'seminary', 1);
+  save();
+}
+
+function renderTasks() {
+  const list = sortedTasks();
+  const open = list.filter(x => !x.done);
+  // "Quick win" = top third of open tasks by points per minute
+  const quick = new Set(open.slice(0, Math.max(1, Math.ceil(open.length / 3))).map(x => x.id));
+  document.getElementById('task-list').innerHTML = list.length ? list.map(x => `
+    <li class="${x.done ? 'done' : ''}">
+      <button class="check ${x.done ? 'done' : ''}" data-done-task="${x.id}" aria-label="Toggle done">✓</button>
+      <div class="info"><div class="name">${esc(x.title)} ${quick.has(x.id) ? '<span class="pill">quick win</span>' : ''}</div>
+        <div class="meta">${x.course ? esc(x.course) + ' · ' : ''}${x.points} pts · ~${x.minutes} min · ${ratio(x).toFixed(1)} pts/min</div></div>
+      <button class="x" data-del-task="${x.id}" aria-label="Delete">×</button>
+    </li>`).join('') : '<li class="empty">Nothing yet — add the assignments you have open.</li>';
+}
+
+document.getElementById('task-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  state.tasks.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    title: f.get('title').trim(), course: f.get('course').trim(),
+    points: Number(f.get('points')), minutes: Number(f.get('minutes')), done: false,
+  });
+  save(); e.target.reset(); render();
+});
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.doneTask) { completeTask(b.dataset.doneTask); render(); }
+  if (b.dataset.delTask && confirm('Delete this assignment?')) {
+    state.tasks = state.tasks.filter(x => x.id !== b.dataset.delTask); save(); render();
+  }
+});
+
+// ---------- vocab ----------
+let session = null; // { queue: [ids], i, shown }
+
+function startReview() {
+  // Least recently reviewed first, with a little shuffle so it doesn't feel stale
+  const pool = [...state.vocab].sort((a, b) => (a.last || '').localeCompare(b.last || '') || Math.random() - .5);
+  session = { queue: pool.slice(0, REVIEW_SIZE).map(x => x.id), i: 0, shown: false };
+}
+
+function renderVocab() {
+  const area = document.getElementById('review-area');
+  if (!state.vocab.length) {
+    area.innerHTML = '<p class="empty">Add a few words or concepts below, then come back here for a 2-minute review.</p>';
+  } else if (!session) {
+    const done = countOn(today(), 'vocab') > 0;
+    area.innerHTML = `<p class="sub">${done ? 'Done for today ✓ — another round is a bonus.' : `Review ${Math.min(REVIEW_SIZE, state.vocab.length)} cards. That's all it takes.`}</p>
+      <button class="btn" id="start-review">Start review</button>`;
+  } else if (session.i >= session.queue.length) {
+    area.innerHTML = `<div class="flash"><div class="term">Nice work 🎉</div>
+      <div class="def">Vocab review checked off for today.</div></div>
+      <button class="btn ghost" id="close-review">Close</button>`;
+  } else {
+    const card = state.vocab.find(x => x.id === session.queue[session.i]);
+    area.innerHTML = `<p class="sub">Card ${session.i + 1} of ${session.queue.length}</p>
+      <div class="flash"><div class="term">${esc(card.term)}</div>
+        ${session.shown ? `<div class="def">${esc(card.def)}</div>` : ''}</div>
+      ${session.shown
+        ? '<div class="row"><button class="btn ghost" id="again">Still learning</button><button class="btn" id="got">Got it</button></div>'
+        : '<button class="btn" id="reveal" style="width:100%">Show meaning</button>'}`;
+  }
+
+  document.getElementById('vocab-count').textContent = state.vocab.length;
+  document.getElementById('vocab-list').innerHTML = state.vocab.length
+    ? state.vocab.map(x => `<li><div class="info"><div class="name">${esc(x.term)}</div>
+        <div class="meta">${esc(x.def)}</div></div>
+        <button class="x" data-del-vocab="${x.id}" aria-label="Delete">×</button></li>`).join('')
+    : '<li class="empty">No terms yet.</li>';
+}
+
+document.getElementById('review-area').addEventListener('click', e => {
+  const id = e.target.id;
+  if (id === 'start-review') startReview();
+  if (id === 'reveal') session.shown = true;
+  if (id === 'close-review') session = null;
+  if (id === 'got' || id === 'again') {
+    const card = state.vocab.find(x => x.id === session.queue[session.i]);
+    // "Still learning" cards stay at the front of the line for next time
+    card.last = id === 'got' ? new Date().toISOString() : '';
+    session.i++; session.shown = false;
+    if (session.i >= session.queue.length) setCount(today(), 'vocab', 1);
+    save();
+  }
+  render();
+});
+
+document.getElementById('vocab-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  state.vocab.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    term: f.get('term').trim(), def: f.get('def').trim(), last: '' });
+  save(); e.target.reset(); render();
+});
+
+document.getElementById('vocab-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-del-vocab]');
+  if (b && confirm('Delete this term?')) {
+    state.vocab = state.vocab.filter(x => x.id !== b.dataset.delVocab); session = null; save(); render();
+  }
+});
+
+// ---------- progress ----------
+function renderProgress() {
+  const days = [...Array(28)].map((_, i) => addDays(new Date(), i - 27));
+  const daily = HABITS.filter(h => h.kind === 'daily');
+  const cells = days.map(d => {
+    const n = daily.filter(h => countOn(dkey(d), h.id)).length;
+    return `<div class="cell l${Math.ceil(n / daily.length * 3)}"title="${dkey(d)}: ${n}/${daily.length}">${d.getDate()}</div>`;
+  }).join('');
+
+  const stats = HABITS.map(h => {
+    if (h.kind === 'weekly') {
+      const s = weeklyStreak(h);
+      return `<li><div class="info"><div class="name">${esc(h.name)}</div>
+        <div class="meta">${weekCount(h.id)} this week · ${weekCount(h.id, addDays(new Date(), -7))} last week · ${s} week${s === 1 ? '' : 's'} in a row</div></div></li>`;
+    }
+    const last28 = days.filter(d => countOn(dkey(d), h.id)).length;
+    return `<li><div class="info"><div class="name">${esc(h.name)}</div>
+      <div class="meta">${last28}/28 days · current streak ${streak(h.id)}</div></div></li>`;
+  }).join('');
+
+  const pts = state.tasks.filter(x => x.done).reduce((t, x) => t + x.points, 0);
+  const left = state.tasks.filter(x => !x.done).reduce((t, x) => t + x.points, 0);
+
+  document.getElementById('progress-area').innerHTML = `
+    <div class="card"><h2>Last 4 weeks</h2>
+      <p class="sub">Darker = more daily habits done that day.</p>
+      <div class="grid7">${cells}</div></div>
+    <div class="card"><h2>Habits</h2><ul class="list">${stats}</ul></div>
+    <div class="card"><h2>Seminary points</h2>
+      <p><span class="pill">${pts} pts earned</span> &nbsp; <span class="meta">${left} pts still open</span></p></div>`;
+}
+
+// ---------- backup ----------
+document.getElementById('export').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+  a.download = `helpful-habits-${today()}.json`;
+  a.click();
+};
+document.getElementById('import').onclick = () => document.getElementById('import-file').click();
+document.getElementById('import-file').onchange = async e => {
+  try {
+    const data = JSON.parse(await e.target.files[0].text());
+    if (!data.log) throw new Error('bad file');
+    state = { log: data.log, tasks: data.tasks || [], vocab: data.vocab || [] };
+    save(); render(); alert('Imported!');
+  } catch (err) { alert('That file could not be imported.'); }
+};
+
+// ---------- tabs ----------
+document.querySelector('nav').addEventListener('click', e => {
+  const tab = e.target.dataset.tab;
+  if (!tab) return;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + tab);
+});
+
+function render() { renderToday(); renderTasks(); renderVocab(); renderProgress(); }
+render();
+</script>
+</body>
+</html>
